@@ -6,6 +6,7 @@
 #include <arpa/inet.h>
 #include <linux/if_ether.h>
 #include <netinet/ether.h>
+#include <unistd.h> 
 
 #define DEAUTH 0xC0
 #define DISASSOC 0xA0
@@ -21,7 +22,7 @@ struct ieee80211_frame {
 };
 
 // Function to send control frame (Deauth/Disassoc)
-void send_control_packet(pcap_t *handle, u_char *bssid, u_char *client, int subtype) {
+void send_control_packet(pcap_t *handle, u_char *bssid, u_char *client, int subtype) { 
     struct ether_header *eth_header;
     u_char packet[128];
     
