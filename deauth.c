@@ -6,7 +6,7 @@
 #include <arpa/inet.h>
 #include <linux/if_ether.h>
 #include <netinet/ether.h>
-#include <unistd.h>  // Added dependency
+#include <unistd.h>  
 #include "deauth.h"
 
 #define MAX_DEAUTH_PACKETS 100
