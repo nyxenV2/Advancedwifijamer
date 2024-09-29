@@ -71,12 +71,12 @@ func channelHop(interfaceName string) {
 func capturePackets() {
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 	for packet := range packetSource.Packets() {
-		eth := packet.Layer(gopacket.LayerTypeEthernet)
-		if eth == nil {
+		ethLayer := packet.Layer(gopacket.LayerTypeEthernet)
+		if ethLayer == nil {
 			continue
 		}
 
-		ethernet, ok := eth.(*gopacket.Ethernet)
+		ethernet, ok := ethLayer.(*gopacket.Ethernet)
 		if !ok {
 			log.Println("Error asserting Ethernet layer")
 			continue
