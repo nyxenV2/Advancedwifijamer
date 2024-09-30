@@ -21,6 +21,7 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+	"unsafe"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
@@ -85,7 +86,7 @@ func capturePackets() {
 			if args.targetClient != nil {
 				if ethernet.DstMAC.String() == args.targetClient.String() {
 					C.send_control_packet(
-						(*C.pcap_t)(handle.Handle),
+						(*C.pcap_t)(unsafe.Pointer(handle)),
 						(*C.uint8_t)(&args.targetAP[0]),
 						(*C.uint8_t)(&args.targetClient[0]),
 						C.DEAUTH,
@@ -94,7 +95,7 @@ func capturePackets() {
 				}
 			} else {
 				C.send_control_packet(
-					(*C.pcap_t)(handle.Handle),
+					(*C.pcap_t)(unsafe.Pointer(handle)),
 					(*C.uint8_t)(&args.targetAP[0]),
 					nil,
 					C.DEAUTH,
