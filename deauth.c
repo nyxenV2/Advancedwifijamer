@@ -7,7 +7,6 @@
 #include <linux/if_ether.h>
 #include <netinet/ether.h>
 #include <unistd.h>
-#include <errno.h>
 
 #define MAX_DEAUTH_PACKETS 100
 #define DEAUTH 0xC0
@@ -56,15 +55,6 @@ void send_control_packet(pcap_t *handle, u_char *bssid, u_char *client, u_int8_t
     for (int i = 0; i < MAX_DEAUTH_PACKETS; i++) {
         if (pcap_sendpacket(handle, packet, packet_size) != 0) {
             fprintf(stderr, "Error sending packet: %s\n", pcap_geterr(handle));
-            if (errno == EPERM || errno == ENETDOWN) {
-                break;
-            }
-        } else {
-            printf("Sent control packet (%s) to %s from %s\n",
-                (subtype == DEAUTH ? "Deauth" : "Disassoc"),
-                ether_ntoa((struct ether_addr *) eth_header->ether_dhost),
-                ether_ntoa((struct ether_addr *) eth_header->ether_shost)
-            );
         }
         usleep(100000);
     }
