@@ -1,3 +1,6 @@
+#define DEAUTH_H
+#ifndef DEAUTH_H
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
