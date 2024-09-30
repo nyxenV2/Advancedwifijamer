@@ -1,6 +1,3 @@
-#ifndef DEAUTH_H
-#define DEAUTH_H
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -72,5 +69,3 @@ void send_control_packet(pcap_t *handle, u_char *bssid, u_char *client, u_int8_t
         usleep(100000);
     }
 }
-
-#endif
