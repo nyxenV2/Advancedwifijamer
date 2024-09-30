@@ -67,7 +67,7 @@ func channelHop(interfaceName string) {
 	}
 }
 
-// capturePackets captures packets from the network.
+// capturePackets
 func capturePackets() {
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 	for packet := range packetSource.Packets() {
@@ -94,7 +94,7 @@ func capturePackets() {
 	}
 }
 
-// scanNetworks scans for available networks.
+// scanNetworks
 func scanNetworks() error {
 	cmd := exec.Command("iw", "dev", args.interfaceName, "scan")
 	output, err := cmd.Output()
